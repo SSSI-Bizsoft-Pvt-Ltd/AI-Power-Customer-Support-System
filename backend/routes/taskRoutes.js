@@ -7,14 +7,23 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const result = await query(`
-      SELECT t.id, t.title, t.summary, t.category, t.confidence_score, t.priority, t.status, t.created_at, m.sender_phone
-      FROM tasks t
-      JOIN messages m ON t.message_id = m.id
-      ORDER BY t.created_at DESC
+      SELECT 
+        m.id as message_id, 
+        m.sender_phone, 
+        m.content, 
+        m.created_at,
+        t.id as task_id,
+        COALESCE(t.title, 'Incoming: ' || LEFT(m.content, 20) || '...') as title,
+        t.category,
+        t.priority,
+        COALESCE(t.status, 'New Message') as status
+      FROM messages m
+      LEFT JOIN tasks t ON t.message_id = m.id
+      ORDER BY m.created_at DESC
     `);
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching tasks:', error);
+    console.error('Error fetching activities:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
