@@ -3,9 +3,13 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import whatsappRoutes from './routes/whatsappRoutes.js';
 import taskRoutes from './routes/taskRoutes.js';
+import { initDB } from './db/index.js';
 
 // Load environment variables
 dotenv.config();
+
+// Auto-initialize DB tables if not present
+initDB();
 
 const app = express();
 const PORT = process.env.PORT || 5000;

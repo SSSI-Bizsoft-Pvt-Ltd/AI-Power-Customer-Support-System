@@ -86,10 +86,31 @@ function Overview() {
                   <Clock size={16} color="var(--text-secondary)" />
                   <div>
                     <div className="font-semibold text-sm">[{task.category}] {task.title}</div>
-                    <div className="text-secondary text-sm" style={{ fontSize: '0.75rem' }}>Conf: {task.confidence_score}% | Sender: {task.sender_phone}</div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span style={{ 
+                        fontSize: '0.7rem', 
+                        padding: '0.1rem 0.6rem', 
+                        borderRadius: '4px', 
+                        background: task.priority === 'High' ? 'rgba(239, 68, 68, 0.2)' : task.priority === 'Medium' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                        color: task.priority === 'High' ? '#ef4444' : task.priority === 'Medium' ? '#f59e0b' : '#10b981',
+                        border: `1px solid ${task.priority === 'High' ? 'rgba(239, 68, 68, 0.3)' : task.priority === 'Medium' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`
+                      }}>
+                        {task.priority || 'Low'}
+                      </span>
+                      <div className="text-secondary text-sm" style={{ fontSize: '0.75rem' }}>Sender: {task.sender_phone}</div>
+                    </div>
                   </div>
                 </div>
-                <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem', borderRadius: '999px', background: 'rgba(99, 102, 241, 0.2)', color: 'var(--accent-color)' }}>{task.status}</span>
+                <span style={{ 
+                  fontSize: '0.75rem', 
+                  padding: '0.25rem 0.75rem', 
+                  borderRadius: '999px', 
+                  background: task.status === 'Resolved' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(99, 102, 241, 0.2)', 
+                  color: task.status === 'Resolved' ? '#10b981' : 'var(--accent-color)',
+                  border: `1px solid ${task.status === 'Resolved' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(99, 102, 241, 0.3)'}`
+                }}>
+                  {task.status || 'New'}
+                </span>
               </div>
             ))
           )}
@@ -103,35 +124,36 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-color)' }}>
       {/* Sidebar */}
       <aside className="glass-panel" style={{ 
         width: '260px', padding: '1.5rem', display: 'flex', flexDirection: 'column', 
-        borderRight: '1px solid var(--panel-border)', borderTop: 'none', borderBottom: 'none', borderLeft: 'none', borderRadius: 0
+        borderRight: '1px solid var(--panel-border)', borderTop: 'none', borderBottom: 'none', borderLeft: 'none', borderRadius: 0,
+        zIndex: 10
       }}>
         <div className="flex items-center gap-2" style={{ marginBottom: '3rem' }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, #6366f1, #4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, #6366f1, #4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 15px rgba(99, 102, 241, 0.4)' }}>
             <MessageSquare size={18} color="white" />
           </div>
           <span className="font-semibold text-lg" style={{ letterSpacing: '0.5px' }}>SupportAI</span>
         </div>
         
         <nav className="flex flex-col gap-2" style={{ flex: 1 }}>
-          <a href="#" className="flex items-center gap-3" style={{ padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', background: 'rgba(99, 102, 241, 0.15)', color: 'white' }}>
-            <LayoutDashboard size={20} />
+          <a href="#" className="flex items-center gap-3" style={{ padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', background: 'rgba(99, 102, 241, 0.15)', color: 'white', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+            <LayoutDashboard size={20} color="var(--accent-color)" />
             <span className="font-semibold text-sm">Overview</span>
           </a>
-          <a href="#" className="flex items-center gap-3 text-secondary" style={{ padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)' }}>
+          <a href="#" className="flex items-center gap-3 text-secondary hover:text-white transition-colors" style={{ padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)' }}>
             <MessageSquare size={20} />
             <span className="font-semibold text-sm">Tasks</span>
           </a>
-          <a href="#" className="flex items-center gap-3 text-secondary" style={{ padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)' }}>
+          <a href="#" className="flex items-center gap-3 text-secondary hover:text-white transition-colors" style={{ padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)' }}>
             <Settings size={20} />
             <span className="font-semibold text-sm">Settings</span>
           </a>
         </nav>
         
-        <button className="flex items-center gap-3 text-secondary" style={{ padding: '0.75rem 1rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }} onClick={() => navigate('/login')}>
+        <button className="flex items-center gap-3 text-secondary hover:text-danger transition-colors" style={{ padding: '0.75rem 1rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }} onClick={() => navigate('/login')}>
           <LogOut size={20} />
           <span className="font-semibold text-sm">Sign Out</span>
         </button>
@@ -141,7 +163,6 @@ export default function Dashboard() {
       <main style={{ flex: 1, padding: '2rem 3rem', overflowY: 'auto' }}>
         <Routes>
           <Route path="/" element={<Overview />} />
-          {/* Add more routes here, like /tasks, /settings */}
         </Routes>
       </main>
     </div>
