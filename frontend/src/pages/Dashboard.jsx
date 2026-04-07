@@ -8,38 +8,132 @@ function Overview() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-      const role = localStorage.getItem('userRole') || 'Executive';
-      const headers = { 'x-user-role': role };
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({});
 
-      try {
-        const [metricsRes, tasksRes] = await Promise.all([
-          axios.get(`${baseURL}/api/tasks/metrics`, { headers }),
-          axios.get(`${baseURL}/api/tasks`, { headers })
-        ]);
-        setMetrics(metricsRes.data);
-        setTasks(tasksRes.data);
-      } catch (err) {
-        console.error('Failed to fetch dashboard data:', err);
-        if (err.response && err.response.status === 403) {
-           setMetrics({ totalMessages: 'N/A', autoQualifiedTasks: 'N/A', actionRequired: 'N/A' });
-        }
-      } finally {
-        setLoading(false);
+  const fetchData = async () => {
+    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+    const role = localStorage.getItem('userRole') || 'Executive';
+    const headers = { 'x-user-role': role };
+
+    try {
+      const [metricsRes, tasksRes] = await Promise.all([
+        axios.get(`${baseURL}/api/tasks/metrics`, { headers }),
+        axios.get(`${baseURL}/api/tasks`, { headers })
+      ]);
+      setMetrics(metricsRes.data);
+      setTasks(tasksRes.data);
+    } catch (err) {
+      console.error('Failed to fetch dashboard data:', err);
+      if (err.response && err.response.status === 403) {
+         setMetrics({ totalMessages: 'N/A', autoQualifiedTasks: 'N/A', actionRequired: 'N/A' });
       }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
-    
-    // Auto refresh every 10 seconds
     const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
   }, []);
 
+  const handleTaskClick = (task) => {
+    setSelectedTask(task);
+    setEditForm({ ...task });
+    setIsEditing(false);
+  };
+
+  const handleUpdateTask = async () => {
+    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+    const role = localStorage.getItem('userRole') || 'Executive';
+    try {
+      await axios.patch(`${baseURL}/api/tasks/${selectedTask.task_id}`, editForm, {
+        headers: { 'x-user-role': role }
+      });
+      setSelectedTask(null);
+      fetchData(); // Refresh list
+    } catch (err) {
+      alert('Failed to update task');
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-6 animate-fade-in">
+    <div className="flex flex-col gap-6 animate-fade-in" style={{ position: 'relative' }}>
+      {/* Task Details Modal */}
+      {selectedTask && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+          <div className="glass-panel" style={{ maxWidth: '600px', width: '100%', padding: '2rem' }}>
+            <div className="flex justify-between items-start" style={{ marginBottom: '1.5rem' }}>
+               <h2 style={{ fontSize: '1.5rem', fontWeight: 600 }}>Task Details</h2>
+               <button onClick={() => setSelectedTask(null)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>✕</button>
+            </div>
+            
+            <div className="flex flex-col gap-4">
+               <div>
+                  <label className="text-secondary text-sm block mb-1">Status Transition (FR-8)</label>
+                  <select 
+                    className="input-glass" 
+                    value={editForm.status} 
+                    onChange={e => setEditForm({...editForm, status: e.target.value})}
+                  >
+                    <option value="New">New</option>
+                    <option value="Assigned">Assigned</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Waiting for Client">Waiting for Client</option>
+                    <option value="Resolved">Resolved</option>
+                    <option value="Closed">Closed</option>
+                  </select>
+               </div>
+
+               <div>
+                  <label className="text-secondary text-sm block mb-1">Manual Overrides (FR-9)</label>
+                  <input 
+                    className="input-glass" 
+                    placeholder="Task Title"
+                    value={editForm.title} 
+                    onChange={e => setEditForm({...editForm, title: e.target.value})}
+                  />
+               </div>
+
+               <div className="flex gap-4">
+                  <div style={{ flex: 1 }}>
+                    <label className="text-secondary text-sm block mb-1">Category</label>
+                    <select 
+                      className="input-glass" 
+                      value={editForm.category} 
+                      onChange={e => setEditForm({...editForm, category: e.target.value})}
+                    >
+                      <option value="Critical Bug">Critical Bug</option>
+                      <option value="Feature Request">Feature Request</option>
+                      <option value="Support Request">Support Request</option>
+                      <option value="General Inquiry">General Inquiry</option>
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label className="text-secondary text-sm block mb-1">Priority</label>
+                    <select 
+                      className="input-glass" 
+                      value={editForm.priority} 
+                      onChange={e => setEditForm({...editForm, priority: e.target.value})}
+                    >
+                      <option value="High">High</option>
+                      <option value="Medium">Medium</option>
+                      <option value="Low">Low</option>
+                    </select>
+                  </div>
+               </div>
+
+               <button className="btn-primary" style={{ marginTop: '1rem' }} onClick={handleUpdateTask}>
+                 Save Changes
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="flex justify-between items-center" style={{ marginBottom: '1rem' }}>
         <div>
           <h1 className="text-gradient" style={{ fontSize: '2rem', fontWeight: 700 }}>Overview</h1>
@@ -88,7 +182,12 @@ function Overview() {
             <div className="text-secondary">No tasks logged yet. Waiting for WhatsApp messages...</div>
           ) : (
             tasks.slice(0, 10).map((task) => (
-              <div key={task.id} className="flex justify-between items-center" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-md)' }}>
+              <div 
+                key={task.id} 
+                className="flex justify-between items-center hover:glow transition-all" 
+                style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
+                onClick={() => handleTaskClick(task)}
+              >
                 <div className="flex items-center gap-4">
                   <Clock size={16} color="var(--text-secondary)" />
                   <div>

@@ -64,4 +64,56 @@ router.get('/debug', async (req, res) => {
   }
 });
 
+// PATCH /api/tasks/:id - Manual Overrides & Status Transitions (FR-8, FR-9)
+router.patch('/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+  const { title, summary, category, priority, status, project_id } = req.body;
+  const userRole = req.headers['x-user-role'] || 'Executive';
+  const userId = req.headers['x-user-id'] || 1; // Placeholder until full Auth is in place
+
+  try {
+    // 1. Fetch current task state for audit logging
+    const currentTaskRes = await query('SELECT * FROM tasks WHERE id = $1', [id]);
+    if (currentTaskRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+    const currentTask = currentTaskRes.rows[0];
+
+    // 2. Perform Update
+    const updateResult = await query(`
+      UPDATE tasks 
+      SET 
+        title = COALESCE($1, title),
+        summary = COALESCE($2, summary),
+        category = COALESCE($3, category),
+        priority = COALESCE($4, priority),
+        status = COALESCE($5, status),
+        project_id = COALESCE($6, project_id),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $7
+      RETURNING *
+    `, [title, summary, category, priority, status, project_id, id]);
+
+    const updatedTask = updateResult.rows[0];
+
+    // 3. Create Audit Log (FR-10)
+    let actions = [];
+    if (status && status !== currentTask.status) actions.push(`STATUS_CHANGE: ${currentTask.status} -> ${status}`);
+    if (category && category !== currentTask.category) actions.push(`CATEGORY_OVERRIDE: ${currentTask.category} -> ${category}`);
+    if (title && title !== currentTask.title) actions.push('DETAILS_EDITED');
+
+    if (actions.length > 0) {
+      await query(
+        'INSERT INTO audit_logs (task_id, user_id, action, details) VALUES ($1, $2, $3, $4)',
+        [id, userId, actions.join(' | '), JSON.stringify({ old: currentTask, new: updatedTask })]
+      );
+    }
+
+    res.json(updatedTask);
+  } catch (error) {
+    console.error('Error updating task:', error);
+    res.status(500).json({ error: 'Failed to update task' });
+  }
+});
+
 export default router;

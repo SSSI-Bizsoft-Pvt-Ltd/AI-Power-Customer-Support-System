@@ -95,7 +95,12 @@ router.post('/webhook', async (req, res) => {
                 
                 console.log(`[Task Created] ${task.category}: ${task.title}`);
 
-                // D. Send Auto-Response
+                // D. Send Auto-Response with Natural Delay (FR-12)
+                const delayMs = Math.floor(Math.random() * (5000 - 2000 + 1)) + 2000;
+                console.log(`Delaying auto-response by ${delayMs}ms for professionalism...`);
+                
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+
                 await whatsappService.sendTextMessage(
                   from, 
                   `Hi! We've received your request: *${task.title}* and categorized it as a ${task.category}. Our team is looking into it!`
