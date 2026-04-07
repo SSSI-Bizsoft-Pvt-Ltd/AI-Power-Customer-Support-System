@@ -8,12 +8,13 @@ router.get('/', async (req, res) => {
   try {
     const result = await query(`
       SELECT 
+        m.id as id,
         m.id as message_id, 
         m.sender_phone, 
         m.content, 
         m.created_at,
         t.id as task_id,
-        COALESCE(t.title, 'Incoming: ' || LEFT(m.content, 20) || '...') as title,
+        COALESCE(t.title, 'Incoming Support Request') as title,
         t.category,
         t.priority,
         COALESCE(t.status, 'New Message') as status
@@ -21,6 +22,7 @@ router.get('/', async (req, res) => {
       LEFT JOIN tasks t ON t.message_id = m.id
       ORDER BY m.created_at DESC
     `);
+    console.log(`[GET /api/tasks] Returning ${result.rows.length} activities`);
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching activities:', error);
@@ -43,6 +45,19 @@ router.get('/metrics', async (req, res) => {
   } catch (error) {
     console.error('Error fetching metrics:', error);
     res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// DEBUG: Directly fetch messages to see what's in the DB
+router.get('/debug', async (req, res) => {
+  try {
+    const result = await query('SELECT * FROM messages LIMIT 10');
+    res.json({
+      count: result.rows.length,
+      rows: result.rows
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
