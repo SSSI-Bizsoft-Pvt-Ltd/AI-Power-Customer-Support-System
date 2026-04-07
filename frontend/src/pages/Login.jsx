@@ -7,6 +7,7 @@ export default function Login() {
 
   const handleLogin = (e) => {
     e.preventDefault();
+    localStorage.setItem('userRole', 'Admin'); // Defaulting to Admin for the demo
     navigate('/dashboard');
   };
 

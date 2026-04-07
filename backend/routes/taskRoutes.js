@@ -1,10 +1,12 @@
 import express from 'express';
 import { query } from '../db/index.js';
+import { authenticate, authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // GET all active tasks for Dashboard mapping
-router.get('/', async (req, res) => {
+// Accessible by all authenticated staff
+router.get('/', authenticate, async (req, res) => {
   try {
     const result = await query(`
       SELECT 
@@ -31,7 +33,8 @@ router.get('/', async (req, res) => {
 });
 
 // GET basic analytics/KPIs for Dashboard Overview
-router.get('/metrics', async (req, res) => {
+// Restricted to Admins and Managers
+router.get('/metrics', authenticate, authorize(['Admin', 'Manager']), async (req, res) => {
   try {
     const totalMessagesRes = await query('SELECT count(*) FROM messages');
     const totalActionableRes = await query('SELECT count(*) FROM messages WHERE is_actionable = true');

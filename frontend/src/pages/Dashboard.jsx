@@ -11,19 +11,26 @@ function Overview() {
   useEffect(() => {
     const fetchData = async () => {
       const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      const role = localStorage.getItem('userRole') || 'Executive';
+      const headers = { 'x-user-role': role };
+
       try {
         const [metricsRes, tasksRes] = await Promise.all([
-          axios.get(`${baseURL}/api/tasks/metrics`),
-          axios.get(`${baseURL}/api/tasks`)
+          axios.get(`${baseURL}/api/tasks/metrics`, { headers }),
+          axios.get(`${baseURL}/api/tasks`, { headers })
         ]);
         setMetrics(metricsRes.data);
         setTasks(tasksRes.data);
       } catch (err) {
         console.error('Failed to fetch dashboard data:', err);
+        if (err.response && err.response.status === 403) {
+           setMetrics({ totalMessages: 'N/A', autoQualifiedTasks: 'N/A', actionRequired: 'N/A' });
+        }
       } finally {
         setLoading(false);
       }
     };
+
     fetchData();
     
     // Auto refresh every 10 seconds
