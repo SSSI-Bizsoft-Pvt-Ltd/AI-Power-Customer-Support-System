@@ -116,4 +116,22 @@ router.patch('/:id', authenticate, async (req, res) => {
   }
 });
 
+// GET /api/tasks/:id/audit - Fetch audit history for a task (FR-10)
+router.get('/:id/audit', authenticate, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await query(`
+      SELECT a.*, u.name as user_name 
+      FROM audit_logs a
+      LEFT JOIN users u ON a.user_id = u.id
+      WHERE a.task_id = $1
+      ORDER BY a.created_at DESC
+    `, [id]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching audit logs:', error);
+    res.status(500).json({ error: 'Failed to fetch audit logs' });
+  }
+});
+
 export default router;

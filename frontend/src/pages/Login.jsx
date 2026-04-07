@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bot, LogIn, Mail, Lock } from 'lucide-react';
 
@@ -9,6 +9,38 @@ export default function Login() {
     e.preventDefault();
     localStorage.setItem('userRole', 'Admin'); // Defaulting to Admin for the demo
     navigate('/dashboard');
+  };
+
+  useEffect(() => {
+    /* global google */
+    if (typeof google !== 'undefined') {
+      google.accounts.id.initialize({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your_google_client_id.apps.googleusercontent.com',
+        callback: handleGoogleResponse
+      });
+
+      google.accounts.id.renderButton(
+        document.getElementById('googleLoginButton'),
+        { theme: 'outline', size: 'large', type: 'standard', width: '100%', shape: 'rectangular' }
+      );
+    }
+  }, []);
+
+  const handleGoogleResponse = async (response) => {
+    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+    try {
+      const res = await axios.get(`${baseURL}/api/auth/google-verify?idToken=${response.credential}`);
+      const { user } = res.data;
+      
+      localStorage.setItem('userRole', user.role); 
+      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('googleUserToken', response.credential);
+      
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Google verification error:', err);
+      alert('Failed to verify Google account. Please try again.');
+    }
   };
 
   return (
@@ -44,11 +76,19 @@ export default function Login() {
             <Lock size={18} color="var(--text-secondary)" style={{ position: 'absolute', top: '50%', left: '1rem', transform: 'translateY(-50%)' }} />
             <input type="password" className="input-glass" placeholder="Password" style={{ paddingLeft: '2.5rem' }} required />
           </div>
-          <button type="submit" className="btn-primary flex items-center justify-center gap-2" style={{ marginTop: '1rem' }}>
+          <button type="submit" className="btn-primary flex items-center justify-center gap-2" style={{ marginTop: '0.5rem' }}>
             <LogIn size={20} />
             Sign In
           </button>
         </form>
+
+        <div style={{ margin: '1.5rem 0', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ flex: 1, height: '1px', background: 'var(--panel-border)' }} />
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>OR</span>
+          <div style={{ flex: 1, height: '1px', background: 'var(--panel-border)' }} />
+        </div>
+
+        <div id="googleLoginButton" style={{ width: '100%' }}></div>
 
         <div style={{ marginTop: '2rem', textAlign: 'center' }}>
           <a href="#" className="text-sm">Forgot password?</a>

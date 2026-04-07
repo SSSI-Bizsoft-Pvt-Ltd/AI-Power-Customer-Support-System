@@ -9,6 +9,7 @@ function Overview() {
   const [loading, setLoading] = useState(true);
 
   const [selectedTask, setSelectedTask] = useState(null);
+  const [auditLogs, setAuditLogs] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
 
@@ -40,10 +41,21 @@ function Overview() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleTaskClick = (task) => {
+  const handleTaskClick = async (task) => {
+    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+    const role = localStorage.getItem('userRole') || 'Executive';
     setSelectedTask(task);
     setEditForm({ ...task });
     setIsEditing(false);
+
+    try {
+      const res = await axios.get(`${baseURL}/api/tasks/${task.task_id}/audit`, {
+        headers: { 'x-user-role': role }
+      });
+      setAuditLogs(res.data);
+    } catch (err) {
+      console.error('Failed to fetch audit logs', err);
+    }
   };
 
   const handleUpdateTask = async () => {
@@ -65,13 +77,14 @@ function Overview() {
       {/* Task Details Modal */}
       {selectedTask && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-          <div className="glass-panel" style={{ maxWidth: '600px', width: '100%', padding: '2rem' }}>
+          <div className="glass-panel" style={{ maxWidth: '600px', width: '100%', padding: '2rem', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="flex justify-between items-start" style={{ marginBottom: '1.5rem' }}>
                <h2 style={{ fontSize: '1.5rem', fontWeight: 600 }}>Task Details</h2>
                <button onClick={() => setSelectedTask(null)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>✕</button>
             </div>
             
             <div className="flex flex-col gap-4">
+               {/* Details Form UI ... */}
                <div>
                   <label className="text-secondary text-sm block mb-1">Status Transition (FR-8)</label>
                   <select 
@@ -126,9 +139,32 @@ function Overview() {
                   </div>
                </div>
 
-               <button className="btn-primary" style={{ marginTop: '1rem' }} onClick={handleUpdateTask}>
+               <button className="btn-primary" style={{ marginTop: '0.5rem' }} onClick={handleUpdateTask}>
                  Save Changes
                </button>
+
+               {/* Audit Log View (FR-10) */}
+               <div style={{ marginTop: '2rem', borderTop: '1px solid var(--panel-border)', paddingTop: '1.5rem' }}>
+                  <div className="flex items-center gap-2 mb-4">
+                     <Clock size={18} color="var(--accent-color)" />
+                     <h3 style={{ fontWeight: 600 }}>History & Audit Logs</h3>
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    {auditLogs.length === 0 ? (
+                      <p className="text-xs text-secondary">No history available for this task.</p>
+                    ) : (
+                      auditLogs.map((log) => (
+                        <div key={log.id} style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--accent-color)' }}>
+                           <div className="flex justify-between items-start mb-1">
+                              <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{log.action}</span>
+                              <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{new Date(log.created_at).toLocaleString()}</span>
+                           </div>
+                           <p className="text-xs text-secondary">Modified by: {log.user_name || 'System'}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+               </div>
             </div>
           </div>
         </div>
@@ -235,6 +271,7 @@ export default function Dashboard() {
       <aside className="glass-panel" style={{ 
         width: '260px', padding: '1.5rem', display: 'flex', flexDirection: 'column', 
         borderRight: '1px solid var(--panel-border)', borderTop: 'none', borderBottom: 'none', borderLeft: 'none', borderRadius: 0,
+        height: '100vh', position: 'sticky', top: 0,
         zIndex: 10
       }}>
         <div className="flex items-center gap-2" style={{ marginBottom: '3rem' }}>
@@ -244,7 +281,7 @@ export default function Dashboard() {
           <span className="font-semibold text-lg" style={{ letterSpacing: '0.5px' }}>SupportAI</span>
         </div>
         
-        <nav className="flex flex-col gap-2" style={{ flex: 1 }}>
+        <nav className="flex flex-col gap-2" style={{ flex: 1, overflowY: 'auto' }}>
           <a href="#" className="flex items-center gap-3" style={{ padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', background: 'rgba(99, 102, 241, 0.15)', color: 'white', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
             <LayoutDashboard size={20} color="var(--accent-color)" />
             <span className="font-semibold text-sm">Overview</span>
@@ -259,10 +296,15 @@ export default function Dashboard() {
           </a>
         </nav>
         
-        <button className="flex items-center gap-3 text-secondary hover:text-danger transition-colors" style={{ padding: '0.75rem 1rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }} onClick={() => navigate('/login')}>
-          <LogOut size={20} />
-          <span className="font-semibold text-sm">Sign Out</span>
-        </button>
+        <div style={{ marginTop: 'auto', paddingTop: '1.5rem', borderTop: '1px solid var(--panel-border)' }}>
+          <button className="flex items-center gap-3 text-secondary hover:text-danger (transition-colors)" style={{ padding: '0.75rem 1rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%' }} onClick={() => {
+            localStorage.removeItem('userRole');
+            navigate('/login');
+          }}>
+            <LogOut size={20} />
+            <span className="font-semibold text-sm">Sign Out</span>
+          </button>
+        </div>
       </aside>
 
       {/* Main Content */}
